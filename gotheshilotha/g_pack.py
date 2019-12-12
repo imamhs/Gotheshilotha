@@ -24,6 +24,7 @@ class GTS_pack:
         self.mean_object_distance_to_lure = [] # mean of objects distances to the lure
         self.average_objects_yaw_rate = []  # average of objects speeds
         self.average_objects_speed = [] # average of objects speeds
+        self.average_objects_average_speed = []
         self.average_objects_speed_model = []
         self.kdtree_lure_points = None
         self.average_objects_distance_lure_path = [] # average of objects distances to the lure path
@@ -95,6 +96,7 @@ class GTS_pack:
             mean_greyhound_distance = 0.0
 
             total_speed = 0
+            total_speed_average = 0
 
             total_yaw_rate = 0
 
@@ -117,6 +119,7 @@ class GTS_pack:
                 mean_greyhound_distance = mean_greyhound_distance + self.racing_objects[ii + 1].distance_to_lure[i]
 
                 total_speed += self.racing_objects[ii + 1].speed[i]
+                total_speed_average += self.racing_objects[ii + 1].average_speed[i]
                 total_yaw_rate += self.racing_objects[ii + 1].yaw_rate[i]
 
                 if _cal_lpd == True:
@@ -152,6 +155,7 @@ class GTS_pack:
             self.mean_object_distance_to_lure.append(mean_greyhound_distance)
 
             self.average_objects_speed.append(total_speed / nog)
+            self.average_objects_average_speed.append(total_speed_average / nog)
 
             self.average_objects_yaw_rate.append(total_yaw_rate / nog)
 
