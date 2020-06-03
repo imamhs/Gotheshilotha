@@ -170,7 +170,7 @@ class GTS_pack:
             self.average_objects_speed_model = y_p
             self.average_objects_speed_model[0] = 0.0
 
-    def load_data(self, filename, _stride_duration=0.282, _max_speed=24, _max_acceleration=20, _max_yaw_rate=1):
+    def load_data(self, filename, _stride_duration=0.282, _max_speed=24, _max_acceleration=20, _max_yaw_rate=1, _min_time_period=30.0):
 
         print("Trying loading race data ...")
 
@@ -199,12 +199,18 @@ class GTS_pack:
                 self.num_of_objects = len(self.racing_objects)
 
             else:
-                for i in range(self.num_of_objects):
+                for i in range(len(self.racing_objects)):
                     self.racing_objects[i].time.append(float(row[0]))
                     self.racing_objects[i].coord.append((float(row[i+i+1]), float(row[i+i+2])))
 
         csv_in.close()
 
+        if self.racing_objects[0].time[-1] < _min_time_period:
+            self.racing_objects.clear()
+            self.num_of_objects = 0
+            return False
+
+        self.num_of_objects = len(self.racing_objects)
         self.sample_size = len(self.racing_objects[0].time)
 
         for i in range(self.num_of_objects):
@@ -220,3 +226,5 @@ class GTS_pack:
         for i in range(self.sample_size):
             self.kdtree_lure_points[i, 0] = self.racing_objects[0].coord[i][0]
             self.kdtree_lure_points[i, 1] = self.racing_objects[0].coord[i][1]
+
+        return True
