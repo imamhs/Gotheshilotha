@@ -42,16 +42,16 @@ class GTS_object:
         self.adjusted_data = False  # wheather data is adjusted to match stride frequency or not
         self.distance_to_lure_path = []
 
-    def clean_coord(self):
+    def clean_coord(self, _factor=1):
         x_coord, y_coord = list(zip(*self.coord))
 
-        xnew_coord = S_moving_average_data(x_coord, _smoothing=1)
-        ynew_coord = S_moving_average_data(y_coord, _smoothing=1)
+        xnew_coord = S_moving_average_data(x_coord, _smoothing=_factor)
+        ynew_coord = S_moving_average_data(y_coord, _smoothing=_factor)
 
         self.coord.clear()
         self.coord = list(zip(xnew_coord,ynew_coord))
 
-    def calculate_dynamics_factors(self, _lure_points, _cal_lpd):
+    def calculate_dynamics_factors(self, _lure_points=[], _cal_lpd=False):
 
         total_distance = 0.0
 

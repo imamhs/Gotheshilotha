@@ -77,7 +77,7 @@ class GTS_pack:
             self.kdtree_lure_points[i, 0] = self.racing_objects[0].coord[i][0]
             self.kdtree_lure_points[i, 1] = self.racing_objects[0].coord[i][1]
 
-    def calculate_dynamics_factors(self, _cal_lpd=True):
+    def calculate_dynamics_factors(self, _cal_lpd=False):
 
         nog = self.num_of_objects - 1
 
@@ -170,7 +170,7 @@ class GTS_pack:
             self.average_objects_speed_model = y_p
             self.average_objects_speed_model[0] = 0.0
 
-    def load_data(self, filename, _stride_duration=0.282, _max_speed=24, _max_acceleration=20, _max_yaw_rate=1, _min_time_period=30.0):
+    def load_data(self, filename, _stride_duration=0.282, _max_speed=24, _max_acceleration=20, _max_yaw_rate=1, _min_time_period=2.0):
 
         print("Trying loading race data ...")
 
