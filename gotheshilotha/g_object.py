@@ -24,6 +24,7 @@ class GTS_object:
         self.max_acceleration = _max_acceleration
         self.max_angular_displacement = 0.0
         self.max_yaw_rate = _max_yaw_rate
+        self.max_radius_of_curvature = 0.0
         self.coord = [] # X and Y coordinates
         self.displacement = []
         self.heading = []
@@ -67,20 +68,20 @@ class GTS_object:
             else:
                 distance = hypot(self.coord[i][0]-self.coord[i-1][0], self.coord[i][1]-self.coord[i-1][1])
                 if (distance >= self.max_displacement):
-                    total_distance = total_distance + (self.distance[i-1]-self.distance[i-2])
+                    total_distance += self.displacement[i-1]
                     self.displacement.append(self.displacement[i-1])
                     self.distance.append(total_distance)
                 else:
-                    total_distance = total_distance + distance
+                    total_distance += distance
                     self.displacement.append(distance)
                     self.distance.append(total_distance)
 
             if (i == 0):
                 self.speed.append(0.0)
-                self.average_speed.append(0)
+                self.average_speed.append(0.0)
             else:
                 speed = self.displacement[i] / self.time_interval
-                if speed < 100.0:
+                if speed < self.max_speed:
                     self.speed.append(speed)
                 else:
                     self.speed.append(self.speed[i - i])
@@ -148,14 +149,14 @@ class GTS_object:
                 else:
                     radius_of_curvature = (side_a * side_b * side_c) / (4 * triangle_area)
                     curvature = 1 / radius_of_curvature
-                    if radius_of_curvature < 1000:
+                    if radius_of_curvature < self.max_radius_of_curvature:
                         self.radius_of_curvature.append(radius_of_curvature)
                         self.curvature.append(curvature)
                     else:
                         self.radius_of_curvature.append(float('inf'))
                         self.curvature.append(0.0)
             else:
-                self.radius_of_curvature.append(float('inf'))
+                self.radius_of_curvature.append(0.0)
                 self.curvature.append(0.0)
 
             if _cal_lpd == True:
@@ -165,6 +166,10 @@ class GTS_object:
                 self.distance_to_lure_path.append(((((nearby_lure_point2[1]-nearby_lure_point1[1])*self.coord[i][0])-((nearby_lure_point2[0]-nearby_lure_point1[0])*self.coord[i][1])+(nearby_lure_point2[0]*nearby_lure_point1[1])-(nearby_lure_point2[1]*nearby_lure_point1[0]))/sqrt(((nearby_lure_point2[1]-nearby_lure_point1[1])**2)+((nearby_lure_point2[0]-nearby_lure_point1[0])**2))))
 
         self.heading[0] = self.heading[1]
+        self.radius_of_curvature[0] = self.radius_of_curvature[1]
+        self.radius_of_curvature[-1] = self.radius_of_curvature[-2]
+        self.curvature[0] = self.curvature[1]
+        self.curvature[-1] = self.curvature[-2]
 
         if self.adjusted_data == True:
 

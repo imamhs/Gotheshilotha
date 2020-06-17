@@ -67,6 +67,8 @@ class GTS_pack:
             self.racing_objects[i].sampling_size = len(self.racing_objects[i].time)
             self.racing_objects[i].time_interval = max(self.racing_objects[i].time) / self.racing_objects[i].sampling_size
             self.racing_objects[i].max_displacement = self.racing_objects[i].time_interval * self.racing_objects[i].max_speed
+            self.racing_objects[i].max_angular_displacement = self.racing_objects[i].time_interval * degrees(self.racing_objects[i].max_yaw_rate)
+            self.racing_objects[i].max_radius_of_curvature = self.racing_objects[i].max_speed / self.racing_objects[i].max_yaw_rate
             self.racing_objects[i].sampling_rate = int(1 / self.racing_objects[i].time_interval)
             self.racing_objects[i].stride_cycle_steps = ceil(self.racing_objects[i].stride_duration / self.racing_objects[i].time_interval)
             self.racing_objects[i].adjusted_data = True
@@ -228,6 +230,7 @@ class GTS_pack:
             self.racing_objects[i].time_interval = max(self.racing_objects[i].time) / self.racing_objects[i].sampling_size
             self.racing_objects[i].max_displacement = self.racing_objects[i].time_interval * self.racing_objects[i].max_speed
             self.racing_objects[i].max_angular_displacement = self.racing_objects[i].time_interval * degrees(self.racing_objects[i].max_yaw_rate)
+            self.racing_objects[i].max_radius_of_curvature = self.racing_objects[i].max_speed / self.racing_objects[i].max_yaw_rate
             self.racing_objects[i].sampling_rate = int(1 / self.racing_objects[i].time_interval)
             self.racing_objects[i].stride_cycle_steps = ceil(self.racing_objects[i].stride_duration / self.racing_objects[i].time_interval)
 
