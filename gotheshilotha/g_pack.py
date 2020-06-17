@@ -24,6 +24,8 @@ class GTS_pack:
         self.mean_object_distance_to_lure = [] # mean of objects distances to the lure
         self.average_objects_yaw_rate = []  # average of objects speeds
         self.average_objects_speed = [] # average of objects speeds
+        self.average_objects_curvature = [] # average of objects' path curvature
+        self.average_objects_heading = []
         self.average_objects_average_speed = []
         self.average_objects_speed_model = []
         self.kdtree_lure_points = None
@@ -79,7 +81,7 @@ class GTS_pack:
 
     def calculate_dynamics_factors(self, _cal_lpd=False):
 
-        nog = self.num_of_objects - 1
+        nob = self.num_of_objects - 1
 
         total_distance = 0
 
@@ -96,13 +98,15 @@ class GTS_pack:
             mean_greyhound_distance = 0.0
 
             total_speed = 0
+            total_curvature = 0
+            total_heading = 0
             total_speed_average = 0
 
             total_yaw_rate = 0
 
             mean_greyhound_distance_lure_path = 0.0
 
-            for ii in range(nog):
+            for ii in range(nob):
 
                 centroid_position_x = centroid_position_x + self.racing_objects[ii+1].coord[i][0]
                 centroid_position_y = centroid_position_y + self.racing_objects[ii+1].coord[i][1]
@@ -121,14 +125,16 @@ class GTS_pack:
                 total_speed += self.racing_objects[ii + 1].speed[i]
                 total_speed_average += self.racing_objects[ii + 1].average_speed[i]
                 total_yaw_rate += self.racing_objects[ii + 1].yaw_rate[i]
+                total_curvature += self.racing_objects[ii + 1].curvature[i]
+                total_heading += self.racing_objects[ii + 1].heading[i]
 
                 if _cal_lpd == True:
                     mean_greyhound_distance_lure_path = mean_greyhound_distance_lure_path + self.racing_objects[ii + 1].distance_to_lure_path[i]
 
             self.lure_separation_distance.append(min(lure_separation_distances))
 
-            centroid_position_x = centroid_position_x / nog
-            centroid_position_y = centroid_position_y / nog
+            centroid_position_x = centroid_position_x / nob
+            centroid_position_y = centroid_position_y / nob
 
             self.centroid_coord.append(OPoint2D(centroid_position_x, centroid_position_y))
 
@@ -143,24 +149,26 @@ class GTS_pack:
                     total_distance = total_distance + distance
                     self.centroid_distance.append(total_distance)
 
-            mean_distance = mean_distance / nog
+            mean_distance = mean_distance / nob
 
             if mean_distance < 20:
                 self.mean_centroid_distance.append(mean_distance)
             else:
                 self.mean_centroid_distance.append(0.0)
 
-            mean_greyhound_distance = mean_greyhound_distance / nog
+            mean_greyhound_distance = mean_greyhound_distance / nob
 
             self.mean_object_distance_to_lure.append(mean_greyhound_distance)
 
-            self.average_objects_speed.append(total_speed / nog)
-            self.average_objects_average_speed.append(total_speed_average / nog)
+            self.average_objects_speed.append(total_speed / nob)
+            self.average_objects_average_speed.append(total_speed_average / nob)
 
-            self.average_objects_yaw_rate.append(total_yaw_rate / nog)
+            self.average_objects_yaw_rate.append(total_yaw_rate / nob)
+            self.average_objects_curvature.append(total_curvature/nob)
+            self.average_objects_heading.append(total_heading / nob)
 
             if _cal_lpd == True:
-                self.average_objects_distance_lure_path.append(mean_greyhound_distance_lure_path / nog)
+                self.average_objects_distance_lure_path.append(mean_greyhound_distance_lure_path / nob)
 
         if self.racing_objects[1].adjusted_data == True:
 
@@ -184,6 +192,8 @@ class GTS_pack:
         self.lure_separation_distance.clear()
         self.mean_object_distance_to_lure.clear()
         self.average_objects_speed.clear()
+        self.average_objects_curvature.clear()
+        self.average_objects_heading.clear()
         self.average_objects_speed_model.clear()
         self.average_objects_distance_lure_path.clear()
         self.kdtree_lure_points = None
