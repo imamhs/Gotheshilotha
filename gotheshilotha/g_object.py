@@ -26,6 +26,7 @@ class GTS_object:
         self.max_yaw_rate = _max_yaw_rate
         self.coord = [] # X and Y coordinates
         self.displacement = []
+        self.heading = []
         self.distance = []
         self.speed = []
         self.average_speed = []
@@ -42,7 +43,7 @@ class GTS_object:
         self.adjusted_data = False  # wheather data is adjusted to match stride frequency or not
         self.distance_to_lure_path = []
 
-    def clean_coord(self, _factor=1):
+    def clean_coord(self, _factor=2):
         x_coord, y_coord = list(zip(*self.coord))
 
         xnew_coord = S_moving_average_data(x_coord, _smoothing=_factor)
@@ -99,8 +100,11 @@ class GTS_object:
                 self.yaw_rate.append(0.0)
                 if i == 1:
                     previous_heading.define_line(self.coord[i-1][0], self.coord[i-1][1], self.coord[i][0], self.coord[i][1])
+                    self.heading.append(0.0)
+                    self.heading.append(previous_heading.angle)
             else:
                 current_heading.define_line(self.coord[i-1][0], self.coord[i-1][1], self.coord[i][0], self.coord[i][1])
+                self.heading.append(current_heading.angle)
                 angular_displacement = current_heading.angle - previous_heading.angle
                 if abs(angular_displacement) > 300:
                     if current_heading.angle > 270:
@@ -121,6 +125,8 @@ class GTS_object:
                 else:
                     self.yaw_rate.append(self.yaw_rate[i - i])
 
+            self.heading[0] = self.heading[1]
+            
             if (i != 0 and i != (self.sampling_size - 1)):
                 point1_x = self.coord[i-1][0]
                 point1_y = self.coord[i-1][1]
