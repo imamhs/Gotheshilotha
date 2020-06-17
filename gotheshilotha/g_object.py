@@ -125,8 +125,6 @@ class GTS_object:
                 else:
                     self.yaw_rate.append(self.yaw_rate[i - i])
 
-            self.heading[0] = self.heading[1]
-            
             if (i != 0 and i != (self.sampling_size - 1)):
                 point1_x = self.coord[i-1][0]
                 point1_y = self.coord[i-1][1]
@@ -165,6 +163,8 @@ class GTS_object:
                 nearby_lure_point1 = (_lure_points[nearby_lure_points_indices[0]][0], _lure_points[nearby_lure_points_indices[0]][1])
                 nearby_lure_point2 = (_lure_points[nearby_lure_points_indices[1]][0], _lure_points[nearby_lure_points_indices[1]][1])
                 self.distance_to_lure_path.append(((((nearby_lure_point2[1]-nearby_lure_point1[1])*self.coord[i][0])-((nearby_lure_point2[0]-nearby_lure_point1[0])*self.coord[i][1])+(nearby_lure_point2[0]*nearby_lure_point1[1])-(nearby_lure_point2[1]*nearby_lure_point1[0]))/sqrt(((nearby_lure_point2[1]-nearby_lure_point1[1])**2)+((nearby_lure_point2[0]-nearby_lure_point1[0])**2))))
+
+        self.heading[0] = self.heading[1]
 
         if self.adjusted_data == True:
 
