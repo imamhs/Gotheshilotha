@@ -24,7 +24,7 @@ class GTS_object:
         self.max_acceleration = _max_acceleration
         self.max_angular_displacement = 0.0
         self.max_yaw_rate = _max_yaw_rate
-        self.max_radius_of_curvature = 0.0
+        self.min_radius_of_curvature = 0.0
         self.coord = [] # X and Y coordinates
         self.displacement = []
         self.heading = []
@@ -149,7 +149,7 @@ class GTS_object:
                 else:
                     radius_of_curvature = (side_a * side_b * side_c) / (4 * triangle_area)
                     curvature = 1 / radius_of_curvature
-                    if radius_of_curvature < self.max_radius_of_curvature:
+                    if radius_of_curvature > self.min_radius_of_curvature:
                         self.radius_of_curvature.append(radius_of_curvature)
                         self.curvature.append(curvature)
                     else:
