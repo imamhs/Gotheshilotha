@@ -19,13 +19,13 @@ class GTS_object:
         self.stride_duration = _stride_duration
         self.stride_cycle_steps = 0 # number of samples per stride
         self.sampling_rate = 0  # number of samples per second
-        self.max_displacement = 0.0 # max displacement in a sample
+        self.max_displacement = 0.0 # max displacement for a sample
         self.max_speed = _max_speed
         self.max_acceleration = _max_acceleration
         self.max_angular_displacement = 0.0
         self.max_yaw_rate = _max_yaw_rate
         self.min_radius_of_curvature = 0.0
-        self.coord = [] # X and Y coordinates
+        self.coord = [] # X and Y coordinates tuple
         self.displacement = []
         self.heading = []
         self.distance = []
@@ -33,7 +33,7 @@ class GTS_object:
         self.average_speed = []
         self.speed_model = [] # only available for adjusted data
         self.acceleration = []
-        self.acceleration_model = []
+        self.acceleration_model = [] # only available for adjusted data
         self.yaw_rate = []
         self.angular_displacement = []
         self.distance_to_lure = []
@@ -53,7 +53,7 @@ class GTS_object:
         self.coord.clear()
         self.coord = list(zip(xnew_coord,ynew_coord))
 
-    def calculate_dynamics_factors(self, _lure_points=[], _cal_lpd=False):
+    def calculate_dynamics(self):
 
         total_distance = 0.0
 
@@ -158,12 +158,6 @@ class GTS_object:
             else:
                 self.radius_of_curvature.append(0.0)
                 self.curvature.append(0.0)
-
-            if _cal_lpd == True:
-                nearby_lure_points_distances, nearby_lure_points_indices = spatial.KDTree(_lure_points).query((self.coord[i][0],self.coord[i][1]), 2)
-                nearby_lure_point1 = (_lure_points[nearby_lure_points_indices[0]][0], _lure_points[nearby_lure_points_indices[0]][1])
-                nearby_lure_point2 = (_lure_points[nearby_lure_points_indices[1]][0], _lure_points[nearby_lure_points_indices[1]][1])
-                self.distance_to_lure_path.append(((((nearby_lure_point2[1]-nearby_lure_point1[1])*self.coord[i][0])-((nearby_lure_point2[0]-nearby_lure_point1[0])*self.coord[i][1])+(nearby_lure_point2[0]*nearby_lure_point1[1])-(nearby_lure_point2[1]*nearby_lure_point1[0]))/sqrt(((nearby_lure_point2[1]-nearby_lure_point1[1])**2)+((nearby_lure_point2[0]-nearby_lure_point1[0])**2))))
 
         self.heading[0] = self.heading[1]
         self.radius_of_curvature[0] = self.radius_of_curvature[1]
