@@ -160,10 +160,10 @@ class GTS_object:
                 self.curvature.append(0.0)
 
         self.heading[0] = self.heading[1]
-        self.radius_of_curvature[0] = self.radius_of_curvature[1]
-        self.radius_of_curvature[-1] = self.radius_of_curvature[-2]
-        self.curvature[0] = self.curvature[1]
-        self.curvature[-1] = self.curvature[-2]
+        # self.radius_of_curvature[0] = self.radius_of_curvature[1]
+        # self.radius_of_curvature[-1] = self.radius_of_curvature[-2]
+        # self.curvature[0] = self.curvature[1]
+        # self.curvature[-1] = self.curvature[-2]
 
         if self.adjusted_data == True:
 
