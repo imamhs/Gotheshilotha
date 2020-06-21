@@ -15,16 +15,17 @@ class GTS_object:
 
     def __init__(self, _stride_duration, _max_speed, _max_acceleration, _max_yaw_rate):
         self.time = []  # time list
-        self.time_interval = 0.0    # time period between samples
+        self.time_interval = -1 # time period between samples
         self.stride_duration = _stride_duration
-        self.stride_cycle_steps = 0 # number of samples per stride
-        self.sampling_rate = 0  # number of samples per second
-        self.max_displacement = 0.0 # max displacement for a sample
+        self.stride_cycle_steps = -1 # number of samples per stride
+        self.sampling_rate = -1  # number of samples per second
+        self.max_displacement = -1 # max displacement for a sample, -1 to denote not set
         self.max_speed = _max_speed
         self.max_acceleration = _max_acceleration
-        self.max_angular_displacement = 0.0
+        self.max_angular_displacement = -1
         self.max_yaw_rate = _max_yaw_rate
-        self.min_radius_of_curvature = 0.0
+        self.min_radius_of_curvature = -1
+        self.max_radius_of_curvature = 1000 # considered as straight
         self.coord = [] # X and Y coordinates tuple
         self.displacement = []
         self.heading = []
@@ -38,11 +39,10 @@ class GTS_object:
         self.angular_displacement = []
         self.distance_to_lure = []
         self.lane_position = 0
-        self.sampling_size = 0  # total number of samples
+        self.sampling_size = -1  # total number of samples
         self.curvature = [] # curvature of path
         self.radius_of_curvature = []   # radius of curvature of path
         self.adjusted_data = False  # wheather data is adjusted to match stride frequency or not
-        self.distance_to_lure_path = []
 
     def clean_coord(self, _factor=2):
         x_coord, y_coord = list(zip(*self.coord))
@@ -52,6 +52,24 @@ class GTS_object:
 
         self.coord.clear()
         self.coord = list(zip(xnew_coord,ynew_coord))
+
+    def clean_dynamics_results(self, _factor=2):
+
+        xnew_displacement = S_moving_average_data(self.displacement, _smoothing=_factor)
+        xnew_speed = S_moving_average_data(self.speed, _smoothing=_factor)
+        xnew_acceleration = S_moving_average_data(self.acceleration, _smoothing=_factor)
+        xnew_yaw_rate = S_moving_average_data(self.yaw_rate, _smoothing=_factor)
+        xnew_angular_displacement = S_moving_average_data(self.angular_displacement, _smoothing=_factor)
+        xnew_curvature = S_moving_average_data(self.curvature, _smoothing=_factor)
+        xnew_radius_of_curvature = S_moving_average_data(self.radius_of_curvature, _smoothing=_factor)
+
+        self.displacement = xnew_displacement
+        self.speed = xnew_speed
+        self.acceleration = xnew_acceleration
+        self.yaw_rate = xnew_yaw_rate
+        self.angular_displacement = xnew_angular_displacement
+        self.curvature = xnew_curvature
+        self.radius_of_curvature = xnew_radius_of_curvature
 
     def calculate_dynamics(self):
 
@@ -149,12 +167,12 @@ class GTS_object:
                 else:
                     radius_of_curvature = (side_a * side_b * side_c) / (4 * triangle_area)
                     curvature = 1 / radius_of_curvature
-                    if radius_of_curvature > self.min_radius_of_curvature:
+                    if radius_of_curvature > self.min_radius_of_curvature and radius_of_curvature < self.max_radius_of_curvature:
                         self.radius_of_curvature.append(radius_of_curvature)
                         self.curvature.append(curvature)
                     else:
-                        self.radius_of_curvature.append(float('inf'))
-                        self.curvature.append(0.0)
+                        self.radius_of_curvature.append(self.radius_of_curvature[i - i])
+                        self.curvature.append(self.curvature[i - i])
             else:
                 self.radius_of_curvature.append(0.0)
                 self.curvature.append(0.0)

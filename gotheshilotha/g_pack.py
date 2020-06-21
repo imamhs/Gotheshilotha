@@ -46,6 +46,17 @@ class GTS_pack:
 
             self.racing_objects[i].clean_coord()
 
+    def clean_objects_dynamics(self):
+
+        for i in range(self.num_of_objects):
+
+            self.racing_objects[i].clean_dynamics_results()
+
+    def calculate_objects_dynamics(self):
+
+        for i in range(self.num_of_objects):
+            self.racing_objects[i].calculate_dynamics()
+
     def readjust_data_sampling(self):
 
         adjusted_indices = []
@@ -79,9 +90,6 @@ class GTS_pack:
         nob = self.num_of_objects - 1
 
         centroid_distance = 0
-
-        for i in range(self.num_of_objects):
-            self.racing_objects[i].calculate_dynamics()
 
         for i in range(self.sample_size):
             centroid_position_x = 0.0
