@@ -8,7 +8,6 @@ Racing subject object
 from math import hypot, radians, sqrt
 from obosthan import OVector2D
 from numpy import polyfit, polyval
-from scipy import spatial
 from shuddo import S_moving_average_data
 
 class GTS_object:
