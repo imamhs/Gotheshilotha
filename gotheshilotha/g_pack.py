@@ -177,12 +177,15 @@ class GTS_pack:
             self.average_objects_speed_model = y_p
             self.average_objects_speed_model[0] = 0.0
 
-    def load_data(self, filename, _stride_duration=0.282, _max_speed=24, _max_acceleration=20, _max_yaw_rate=1, _min_time_period=2.0):
+    def load_data(self, filename, _stride_duration=0.282, _max_speed=24, _max_acceleration=20, _max_yaw_rate=1, _min_time_period=2.0, _skip_samples_head=0, _skip_samples_tail=0):
 
         print("Trying loading race data ...")
 
         csv_in = open(filename, 'r')
         csv_reader = reader(csv_in)
+        buffer_list = list(csv_reader)
+        total_rows = len(buffer_list)
+        row_counter = 1
 
         self.racing_objects.clear()
         self.centroid_coord.clear()
@@ -195,20 +198,31 @@ class GTS_pack:
         self.average_objects_heading.clear()
         self.average_objects_speed_model.clear()
 
-        for row in csv_reader:
-            if len(self.racing_objects) == 0:
+        try:
 
-                for i in range(int((len(row)-1)/2)):
-                    self.racing_objects.append(GTS_object(_stride_duration, _max_speed, _max_acceleration, _max_yaw_rate))
-                    if i > 0:
-                        self.racing_objects[i].lane_position = int(row[i+i+1][1:2])
+            for row in buffer_list:
+                if len(self.racing_objects) == 0:
 
-                self.num_of_objects = len(self.racing_objects)
+                    for i in range(int((len(row)-1)/2)):
+                        self.racing_objects.append(GTS_object(_stride_duration, _max_speed, _max_acceleration, _max_yaw_rate))
+                        if i > 0:
+                            self.racing_objects[i].lane_position = int(row[i+i+1][1:2])
 
-            else:
-                for i in range(len(self.racing_objects)):
-                    self.racing_objects[i].time.append(float(row[0]))
-                    self.racing_objects[i].coord.append((float(row[i+i+1]), float(row[i+i+2])))
+                    self.num_of_objects = len(self.racing_objects)
+
+                else:
+
+                    if (row_counter >= _skip_samples_head and row_counter <= (total_rows - _skip_samples_tail)):
+
+                        for i in range(len(self.racing_objects)):
+                            self.racing_objects[i].time.append(float(row[0]))
+                            self.racing_objects[i].coord.append((float(row[i+i+1]), float(row[i+i+2])))
+
+                row_counter = row_counter + 1
+
+        except:
+            csv_in.close()
+            return False
 
         csv_in.close()
 
