@@ -23,12 +23,15 @@ class GTS_pack:
         self.centroid_distance = [] # distance travelled by the objects' centroid
         self.lure_separation_distance = [] # distance to lure from the leading object
         self.average_lure_distance = [] # average of objects' distances to the lure
-        self.average_objects_yaw_rate = []  # average yaw rate of objects' yaw rates
         self.average_objects_speed = [] # average speed of objects' speeds
         self.average_objects_curvature = [] # average curvature of objects' paths
         self.average_objects_heading = []
         self.average_objects_average_speed = []
         self.average_objects_speed_model = [] # only available for adjusted data
+        self.average_objects_yaw_rate = []  # average yaw rate of objects' yaw rates
+        self.minmax_objects_speed = []  # minimum and maximum speed of objects
+        self.minmax_objects_curvature = []  # minimum and maximum curvature of objects
+        self.minmax_objects_yaw_rate = []
 
     def is_number(self, s):
         try:
@@ -101,9 +104,15 @@ class GTS_pack:
             average_lure_distance = 0.0
 
             total_speed = 0
+            min_speed = self.racing_objects[1].max_speed
+            max_speed = 0
             total_curvature = 0
+            min_curvature = 1000
+            max_curvature = -1
             total_heading = 0
             total_speed_average = 0
+            min_yaw_rate = self.racing_objects[1].max_yaw_rate
+            max_yaw_rate = 0
 
             total_yaw_rate = 0
 
@@ -129,6 +138,25 @@ class GTS_pack:
                 total_yaw_rate += self.racing_objects[ii + 1].yaw_rate[i]
                 total_curvature += self.racing_objects[ii + 1].curvature[i]
                 total_heading += self.racing_objects[ii + 1].heading[i]
+
+                if self.racing_objects[ii + 1].speed[i] < min_speed:
+                    min_speed = self.racing_objects[ii + 1].speed[i]
+
+                if self.racing_objects[ii + 1].speed[i] > max_speed:
+                    max_speed = self.racing_objects[ii + 1].speed[i]
+
+                if self.racing_objects[ii + 1].curvature[i] < min_curvature:
+                    min_curvature = self.racing_objects[ii + 1].curvature[i]
+
+                if self.racing_objects[ii + 1].curvature[i] > max_curvature:
+                    max_curvature = self.racing_objects[ii + 1].curvature[i]
+
+                if self.racing_objects[ii + 1].yaw_rate[i] < min_yaw_rate:
+                    min_yaw_rate = self.racing_objects[ii + 1].yaw_rate[i]
+
+                if self.racing_objects[ii + 1].yaw_rate[i] > max_yaw_rate:
+                    max_yaw_rate = self.racing_objects[ii + 1].yaw_rate[i]
+
 
             self.lure_separation_distance.append(min(lure_separation_distances))
 
@@ -168,6 +196,10 @@ class GTS_pack:
             self.average_objects_yaw_rate.append(total_yaw_rate / nob)
             self.average_objects_curvature.append(total_curvature/nob)
             self.average_objects_heading.append(total_heading / nob)
+
+            self.minmax_objects_speed.append((min_speed, max_speed))
+            self.minmax_objects_curvature.append((min_curvature, max_curvature))
+            self.minmax_objects_yaw_rate.append((min_yaw_rate, max_yaw_rate))
 
         if self.racing_objects[1].adjusted_data == True:
 
