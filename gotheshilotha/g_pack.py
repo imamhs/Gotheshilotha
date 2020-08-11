@@ -23,6 +23,7 @@ class GTS_pack:
         self.centroid_distance = [] # distance travelled by the objects' centroid
         self.lure_separation_distance = [] # distance to lure from the leading object
         self.average_lure_distance = [] # average of objects' distances to the lure
+        self.average_objects_distance = []  # average speed of objects' speeds
         self.average_objects_speed = [] # average speed of objects' speeds
         self.average_objects_curvature = [] # average curvature of objects' paths
         self.average_objects_heading = []
@@ -103,6 +104,7 @@ class GTS_pack:
 
             average_lure_distance = 0.0
 
+            total_distance = 0
             total_speed = 0
             min_speed = self.racing_objects[1].max_speed
             max_speed = 0
@@ -133,6 +135,7 @@ class GTS_pack:
 
                 average_lure_distance = average_lure_distance + self.racing_objects[ii + 1].distance_to_lure[i]
 
+                total_distance += self.racing_objects[ii + 1].distance[i]
                 total_speed += self.racing_objects[ii + 1].speed[i]
                 total_speed_average += self.racing_objects[ii + 1].average_speed[i]
                 total_yaw_rate += self.racing_objects[ii + 1].yaw_rate[i]
@@ -190,6 +193,7 @@ class GTS_pack:
 
             self.average_lure_distance.append(average_lure_distance)
 
+            self.average_objects_distance.append(total_distance / nob)
             self.average_objects_speed.append(total_speed / nob)
             self.average_objects_average_speed.append(total_speed_average / nob)
 
