@@ -39,6 +39,7 @@ class GTS_object:
         self.radius_of_curvature = []   # path radius of curvature
         self.distance_to_lure = []
         self.average_distance_to_others = []
+        self.offset_to_track = []
         self.start_position_identifier = 0
 
     def adjust_data_sampling(self):
