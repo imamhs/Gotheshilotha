@@ -202,16 +202,16 @@ class GTS_object:
                     if radius_of_curvature > self.min_radius_of_curvature and radius_of_curvature < self.max_radius_of_curvature:
                         self.radius_of_curvature.append(radius_of_curvature)
                         self.curvature.append(curvature)
-                        self.centrifugal_acceleration((self.speed[i]**2)*curvature)
+                        self.centrifugal_acceleration.append((self.speed[i]**2)*curvature)
                     else:
                         if radius_of_curvature < self.min_radius_of_curvature:
                             self.radius_of_curvature.append(self.min_radius_of_curvature)
                             self.curvature.append(1/self.min_radius_of_curvature)
-                            self.centrifugal_acceleration((self.speed[i] ** 2) * self.curvature[i])
+                            self.centrifugal_acceleration.append((self.speed[i] ** 2) * self.curvature[i])
                         elif radius_of_curvature > self.max_radius_of_curvature:
                             self.radius_of_curvature.append(self.max_radius_of_curvature)
                             self.curvature.append(1 / self.max_radius_of_curvature)
-                            self.centrifugal_acceleration((self.speed[i] ** 2) * self.curvature[i])
+                            self.centrifugal_acceleration.append((self.speed[i] ** 2) * self.curvature[i])
             else:
                 self.radius_of_curvature.append(0.0)
                 self.curvature.append(0.0)
