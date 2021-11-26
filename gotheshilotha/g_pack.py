@@ -11,12 +11,12 @@ from numpy import empty
 from scipy.spatial import KDTree
 from obosthan import OPoint2D, OLine2D
 from .g_object import GTS_object
-from shuddo import S_get_cluster_centroid_data, S_find_sample_distance_data
+from shuddo import S_get_cluster_centroid_data, S_find_sample_distance_data, S_standard_deviation_values
 
 class GTS_pack:
 
     def __init__(self, _max_distance):
-        self.SPEED_OF_LIGHT = 299792458
+        self.SPEED_OF_LIGHT = 299792458.0
         self.max_distance = _max_distance  # max separation distance between objects
         self.num_of_objects = -1
         self.sample_size = -1
@@ -38,11 +38,17 @@ class GTS_pack:
         self.average_objects_heading = []
         self.average_objects_yaw_rate = []  # average yaw rate of objects' yaw rates
         self.average_objects_curvature = []  # average curvature of objects' paths
+        self.average_objects_centrifugal_acceleration = []
         self.average_objects_offset_to_track = []  # average offset of objects' from the track path
         self.minmax_objects_speed = []  # minimum and maximum speed of objects
         self.minmax_objects_yaw_rate = [] # minimum and maximum yaw of objects
         self.minmax_objects_curvature = []  # minimum and maximum curvature of objects
         self.minmax_centroid_distance = []  # minimum and maximum distances to the objects' centroid
+        self.minmax_objects_offset_to_track = []  # minimum and maximum offsets of objects' from the track path
+        self.std_objects_speed = []  # std speed of objects
+        self.std_objects_yaw_rate = []  # std yaw of objects
+        self.std_objects_curvature = []  # std curvature of objects
+        self.std_objects_heading = []
 
     def is_number(self, s):
         try:
@@ -92,13 +98,14 @@ class GTS_pack:
         for i in range(self.sample_size):
 
             racing_objects_coords = []
+            racing_objects_speeds = []
+            racing_objects_yaw_rates = []
+            racing_objects_curvatures = []
+            racing_objects_centrifugal_accelerations = []
+            racing_objects_headings = []
 
             distances = []
-            total_speed = 0
             total_speed_average = 0
-            total_heading = 0
-            total_yaw_rate = 0
-            total_curvature = 0
             total_coord_X = 0
             total_coord_Y = 0
 
@@ -113,6 +120,16 @@ class GTS_pack:
 
             for ii in range(nob):
                 racing_objects_coords.append((self.racing_objects[ii+1].coord[i][0], self.racing_objects[ii+1].coord[i][1]))
+                racing_objects_speeds.append(self.racing_objects[ii+1].speed[i])
+                racing_objects_yaw_rates.append(self.racing_objects[ii+1].yaw_rate[i])
+                racing_objects_curvatures.append(self.racing_objects[ii+1].curvature[i])
+                racing_objects_centrifugal_accelerations.append(self.racing_objects[ii+1].centrifugal_acceleration[i])
+                racing_objects_headings.append(self.racing_objects[ii+1].heading[i])
+
+            self.std_objects_speed.append(S_standard_deviation_values(racing_objects_speeds))
+            self.std_objects_yaw_rate.append(S_standard_deviation_values(racing_objects_yaw_rates))
+            self.std_objects_curvature.append(S_standard_deviation_values(racing_objects_curvatures))
+            self.std_objects_heading.append(S_standard_deviation_values(racing_objects_headings))
 
             average_lure_separation_distance, min_lure_separation_distance, max_lure_separation_distance, lure_separation_distances = S_find_sample_distance_data(racing_objects_coords, (self.racing_objects[0].coord[i][0], self.racing_objects[0].coord[i][1]))
 
@@ -151,11 +168,7 @@ class GTS_pack:
                     self.racing_objects[ii+1].distance_to_lure.append(0.0)
 
                 distances.append(self.racing_objects[ii+1].distance[i])
-                total_speed += self.racing_objects[ii+1].speed[i]
                 total_speed_average += self.racing_objects[ii+1].average_speed[i]
-                total_yaw_rate += self.racing_objects[ii+1].yaw_rate[i]
-                total_curvature += self.racing_objects[ii+1].curvature[i]
-                total_heading += self.racing_objects[ii+1].heading[i]
                 total_coord_X += self.racing_objects[ii+1].coord[i][0]
                 total_coord_Y += self.racing_objects[ii + 1].coord[i][1]
 
@@ -179,13 +192,14 @@ class GTS_pack:
 
             self.average_objects_distance.append(sum(distances) / nob)
             self.average_objects_maximum_distance.append(max(distances))
-            self.average_objects_speed.append(total_speed / nob)
+            self.average_objects_speed.append(sum(racing_objects_speeds) / nob)
             self.average_objects_average_speed.append(total_speed_average / nob)
             self.average_objects_coord.append(((total_coord_X / nob), (total_coord_Y / nob)))
 
-            self.average_objects_yaw_rate.append(total_yaw_rate / nob)
-            self.average_objects_curvature.append(total_curvature/nob)
-            self.average_objects_heading.append(total_heading / nob)
+            self.average_objects_yaw_rate.append(sum(racing_objects_yaw_rates) / nob)
+            self.average_objects_curvature.append(sum(racing_objects_curvatures) /nob)
+            self.average_objects_centrifugal_acceleration.append(sum(racing_objects_centrifugal_accelerations) / nob)
+            self.average_objects_heading.append(sum(racing_objects_headings) / nob)
 
             self.minmax_objects_speed.append((min_speed, max_speed))
             self.minmax_objects_curvature.append((min_curvature, max_curvature))
@@ -199,12 +213,13 @@ class GTS_pack:
                     projected_track_segment_end_distance, projected_track_segment_point_index = self.__track_coord_tree.query(self.racing_objects[ii+1].coord[i], 2)
                     self.racing_objects[ii+1].offset_to_track.append(OLine2D(float(self.__track_coord[projected_track_segment_point_index[0], 0]), float(self.__track_coord[projected_track_segment_point_index[0], 1]), float(self.__track_coord[projected_track_segment_point_index[1], 0]), float(self.__track_coord[projected_track_segment_point_index[1], 1])).distance_to_point(self.racing_objects[ii+1].coord[i]))
 
-                total_offset_to_track = 0
+                racing_objects_offset_to_track = []
 
                 for ii in range(nob):
-                    total_offset_to_track += self.racing_objects[ii + 1].offset_to_track[i]
+                    racing_objects_offset_to_track.append(self.racing_objects[ii + 1].offset_to_track[i])
 
-                self.average_objects_offset_to_track.append(total_offset_to_track / nob)
+                self.average_objects_offset_to_track.append(sum(racing_objects_offset_to_track) / nob)
+                self.minmax_objects_offset_to_track.append((min(racing_objects_offset_to_track), max(racing_objects_offset_to_track)))
 
     def load_track_coord(self, filename):
         print("Trying loading track coord data ...")
@@ -293,10 +308,16 @@ class GTS_pack:
         self.average_objects_heading.clear()
         self.average_objects_yaw_rate.clear()
         self.average_objects_curvature.clear()
+        self.average_objects_centrifugal_acceleration.clear()
         self.minmax_objects_speed.clear()
         self.minmax_objects_yaw_rate.clear()
         self.minmax_objects_curvature.clear()
         self.minmax_centroid_distance.clear()
+        self.minmax_objects_offset_to_track.clear()
+        self.std_objects_speed.clear()
+        self.std_objects_yaw_rate.clear()
+        self.std_objects_curvature.clear()
+        self.std_objects_heading.clear()
 
         try:
 
@@ -312,7 +333,7 @@ class GTS_pack:
 
                 else:
 
-                    if (row_counter >= _skip_samples_head and row_counter <= (total_rows - _skip_samples_tail)):
+                    if (row_counter >= (_skip_samples_head+2) and row_counter <= (total_rows - _skip_samples_tail)):
 
                         for i in range(len(self.racing_objects)):
                             self.racing_objects[i].time.append(float(row[0]))

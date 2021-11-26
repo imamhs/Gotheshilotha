@@ -37,6 +37,7 @@ class GTS_object:
         self.angular_displacement = []
         self.curvature = [] # path curvature
         self.radius_of_curvature = []   # path radius of curvature
+        self.centrifugal_acceleration = []
         self.distance_to_lure = []
         self.average_distance_to_others = []
         self.offset_to_track = []
@@ -89,6 +90,7 @@ class GTS_object:
         xnew_angular_displacement = S_moving_average_filter(self.angular_displacement, _smoothing=_factor)
         xnew_curvature = S_moving_average_filter(self.curvature, _smoothing=_factor)
         xnew_radius_of_curvature = S_moving_average_filter(self.radius_of_curvature, _smoothing=_factor)
+        xnew_centrifugal_acceleration = S_moving_average_filter(self.centrifugal_acceleration, _smoothing=_factor)
 
         self.displacement = xnew_displacement
         self.heading = xnew_heading
@@ -98,6 +100,7 @@ class GTS_object:
         self.angular_displacement = xnew_angular_displacement
         self.curvature = xnew_curvature
         self.radius_of_curvature = xnew_radius_of_curvature
+        self.centrifugal_acceleration = xnew_centrifugal_acceleration
 
     def calculate_dynamics(self):
 
@@ -192,22 +195,27 @@ class GTS_object:
                 if (triangle_area == 0):
                     self.radius_of_curvature.append(float('inf'))
                     self.curvature.append(0.0)
+                    self.centrifugal_acceleration.append(0.0)
                 else:
                     radius_of_curvature = (side_a * side_b * side_c) / (4 * triangle_area)
                     curvature = 1 / radius_of_curvature
                     if radius_of_curvature > self.min_radius_of_curvature and radius_of_curvature < self.max_radius_of_curvature:
                         self.radius_of_curvature.append(radius_of_curvature)
                         self.curvature.append(curvature)
+                        self.centrifugal_acceleration((self.speed[i]**2)*curvature)
                     else:
                         if radius_of_curvature < self.min_radius_of_curvature:
                             self.radius_of_curvature.append(self.min_radius_of_curvature)
                             self.curvature.append(1/self.min_radius_of_curvature)
+                            self.centrifugal_acceleration((self.speed[i] ** 2) * self.curvature[i])
                         elif radius_of_curvature > self.max_radius_of_curvature:
                             self.radius_of_curvature.append(self.max_radius_of_curvature)
                             self.curvature.append(1 / self.max_radius_of_curvature)
+                            self.centrifugal_acceleration((self.speed[i] ** 2) * self.curvature[i])
             else:
                 self.radius_of_curvature.append(0.0)
                 self.curvature.append(0.0)
+                self.centrifugal_acceleration.append(0.0)
 
         self.heading[0] = self.heading[1]
 
