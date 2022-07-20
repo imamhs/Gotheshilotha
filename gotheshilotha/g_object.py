@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2021, Md Imam Hossain (emamhd at gmail dot com)
+# Copyright (c) 2019-2022, Md Imam Hossain (emamhd at gmail dot com)
 # see LICENSE.txt for details
 
 """
@@ -7,29 +7,33 @@ Racing subject object
 
 from math import hypot, radians, sqrt, ceil, degrees
 from obosthan import OVector2D
-from shuddo import S_moving_average_filter
+from shuddo import S_moving_average_filter, S_uniform_spread_data
+
+UNDEFINED = -1
 
 class GTS_object:
 
-    def __init__(self, _stride_duration, _max_speed, _max_acceleration, _max_yaw_rate, _max_radius_of_curvature=1000):
+    def __init__(self, _stride_duration, _speed_limit, _acceleration_limit, _yaw_rate_limit, _radius_of_curvature_limit=1000):
         self.stride_duration = _stride_duration
-        self.max_speed = _max_speed
-        self.max_acceleration = _max_acceleration
-        self.max_yaw_rate = _max_yaw_rate
-        self.max_radius_of_curvature = _max_radius_of_curvature  # considered as straight
-        self.sampling_size = -1  # total number of data points
-        self.time_interval = -1 # time period between data points
-        self.max_displacement = -1  # max displacement between data points
-        self.max_angular_displacement = -1
-        self.min_radius_of_curvature = -1
-        self.sampling_rate = -1  # number of data points per second
-        self.stride_cycle_steps = -1  # number of data points per stride
+        self.speed_limit = _speed_limit
+        self.acceleration_limit = _acceleration_limit
+        self.yaw_rate_limit = _yaw_rate_limit
+        self.radius_of_curvature_limit = _radius_of_curvature_limit  # considered as straight
+        self.sampling_size = UNDEFINED  # total number of data points
+        self.time_interval = UNDEFINED # time period between data points
+        self.displacement_limit = UNDEFINED  # max displacement between data points
+        self.angular_displacement_limit = UNDEFINED
+        self.min_radius_of_curvature = UNDEFINED
+        self.sampling_rate = UNDEFINED  # number of data points per second
+        self.stride_cycle_steps = UNDEFINED  # number of data points per stride
         self.stripped_data = False  # flag for whether data points are stripped down to match stride frequency
+        self.corrupted_data = False
         self.time = []  # time
         self.coord = [] # X and Y coordinates tuple
         self.displacement = []
         self.heading = []
         self.distance = []
+        self.yaw = []
         self.speed = []
         self.average_speed = []
         self.acceleration = []
@@ -63,12 +67,42 @@ class GTS_object:
         self.coord = coord
         self.sampling_size = len(self.time)
         self.time_interval = max(self.time) / self.sampling_size
-        self.max_displacement = self.time_interval * self.max_speed
-        self.max_angular_displacement = self.time_interval * degrees(self.max_yaw_rate)
-        self.min_radius_of_curvature = self.max_speed / self.max_yaw_rate
+        self.displacement_limit = self.time_interval * self.speed_limit
+        self.angular_displacement_limit = self.time_interval * degrees(self.yaw_rate_limit)
+        self.min_radius_of_curvature = self.speed_limit / self.yaw_rate_limit
         self.sampling_rate = int(1 / self.time_interval)
         self.stride_cycle_steps = ceil(self.stride_duration / self.time_interval)
         self.stripped_data = True
+
+    def uniform_results_sampling(self):
+
+        data_time = []
+        data_speed = []
+        data_curvature = []
+
+        for i in range(self.sampling_size):
+
+            data_time.append((self.distance[i], self.time[i]))
+            data_speed.append((self.distance[i], self.speed[i]))
+            data_curvature.append((self.distance[i], self.curvature[i]))
+
+        udata_time = S_uniform_spread_data(data_time, self.sampling_size)
+        udata_speed = S_uniform_spread_data(data_speed, self.sampling_size)
+        udata_curvature = S_uniform_spread_data(data_curvature, self.sampling_size)
+
+        self.sampling_size = len(udata_time)
+
+        self.time = []
+        self.distance = []
+        self.speed = []
+        self.curvature = []
+
+        for i in range(self.sampling_size):
+
+            self.time.append(udata_time[i][1])
+            self.distance.append(udata_time[i][0])
+            self.speed.append(udata_speed[i][1])
+            self.curvature.append(udata_curvature[i][1])
 
     def clean_coord(self, _factor=2):
 
@@ -106,48 +140,54 @@ class GTS_object:
 
         total_distance = 0.0
 
+        total_yaw = 0.0
+
         previous_heading = OVector2D(0, 0)
         current_heading = OVector2D(0, 0)
 
         for i in range(self.sampling_size):
 
-            if (i == 0):
+            if i == 0:
                 self.displacement.append(0.0)
                 self.distance.append(0.0)
             else:
-                distance = hypot(self.coord[i][0]-self.coord[i-1][0], self.coord[i][1]-self.coord[i-1][1])
-                if (distance >= self.max_displacement):
-                    total_distance += self.max_displacement
-                    self.displacement.append(self.max_displacement)
-                    self.distance.append(total_distance)
-                else:
-                    total_distance += distance
-                    self.displacement.append(distance)
-                    self.distance.append(total_distance)
+                displacement = hypot(self.coord[i][0]-self.coord[i-1][0], self.coord[i][1]-self.coord[i-1][1])
+                if displacement >= self.displacement_limit:
+                    # displacement_slope = (self.displacement[-1]-self.displacement[-2])/self.stride_duration
+                    # displacement = (displacement_slope*self.stride_duration)+self.displacement[-1]
+                    displacement = self.displacement_limit
 
-            if (i == 0):
+
+                total_distance += displacement
+                self.displacement.append(displacement)
+                self.distance.append(total_distance)
+
+            if i == 0:
                 self.speed.append(0.0)
                 self.average_speed.append(0.0)
             else:
                 speed = self.displacement[i] / self.time_interval
-                if speed < self.max_speed:
-                    self.speed.append(speed)
-                else:
-                    self.speed.append(self.max_speed)
+                if speed > self.speed_limit:
+                    speed_slope = (self.speed[-1]-self.speed[-2])/self.stride_duration
+                    speed = (speed_slope*self.stride_duration)+self.speed[-1]
+
+                self.speed.append(speed)
                 self.average_speed.append(self.distance[i] / self.time[i])
 
-            if (i == 0 or i == 1):
+            if (i == 0) or (i == 1):
                 self.acceleration.append(0.0)
             else:
                 acceleration = (self.speed[i] - self.speed[i - 1]) / self.time_interval
-                if abs(acceleration) < self.max_acceleration:
-                    self.acceleration.append(acceleration)
-                else:
-                    self.acceleration.append((abs(acceleration)/acceleration)*self.max_acceleration)
+                if abs(acceleration) > self.acceleration_limit:
+                    acceleration_slope = (self.acceleration[-1]-self.acceleration[-2])/self.stride_duration
+                    acceleration = (acceleration_slope*self.stride_duration)+self.acceleration[-1]
 
-            if (i == 0 or i == 1):
+                self.acceleration.append(acceleration)
+
+            if (i == 0) or (i == 1):
                 self.angular_displacement.append(0.0)
                 self.yaw_rate.append(0.0)
+                self.yaw.append(0.0)
                 if i == 1:
                     previous_heading.define_line(self.coord[i-1][0], self.coord[i-1][1], self.coord[i][0], self.coord[i][1])
                     self.heading.append(0.0)
@@ -164,18 +204,22 @@ class GTS_object:
                 previous_heading[0] = current_heading[0]
                 previous_heading[1] = current_heading[1]
 
-                if abs(angular_displacement) < self.max_angular_displacement:
-                    self.angular_displacement.append(angular_displacement)
-                else:
-                    self.angular_displacement.append((abs(angular_displacement)/angular_displacement)*self.max_angular_displacement)
+                if abs(angular_displacement) > self.angular_displacement_limit:
+                    angular_displacement_slope = (self.angular_displacement[-1]-self.angular_displacement[-2])/self.stride_duration
+                    angular_displacement = (angular_displacement_slope*self.stride_duration)+self.angular_displacement[-1]
+
+                self.angular_displacement.append(angular_displacement)
 
                 yaw_rate = radians(angular_displacement) / self.time_interval
-                if abs(yaw_rate) < self.max_yaw_rate:
-                    self.yaw_rate.append(yaw_rate)
-                else:
-                    self.yaw_rate.append((abs(yaw_rate)/yaw_rate)*self.max_yaw_rate)
+                if abs(yaw_rate) > self.yaw_rate_limit:
+                    yaw_rate_slope = (self.yaw_rate[-1]-self.yaw_rate[-2])/self.stride_duration
+                    yaw_rate = (yaw_rate_slope*self.stride_duration)+self.yaw_rate[-1]
 
-            if (i != 0 and i != (self.sampling_size - 1)):
+                self.yaw_rate.append(yaw_rate)
+                total_yaw += abs(yaw_rate * self.stride_duration)
+                self.yaw.append(total_yaw)
+
+            if (i != 0) and (i != (self.sampling_size - 1)):
                 point1_x = self.coord[i-1][0]
                 point1_y = self.coord[i-1][1]
                 point2_x = self.coord[i][0]
@@ -188,29 +232,29 @@ class GTS_object:
                 semiperimeter = (0.5) * (side_a + side_b + side_c)
                 delta = semiperimeter * (semiperimeter - side_a) * (semiperimeter - side_b) * (semiperimeter - side_c)
                 triangle_area = 0
-                if (delta > 0):
+                if delta > 0:
                     triangle_area = sqrt(delta)
                 else:
                     triangle_area = 0
-                if (triangle_area == 0):
+                if triangle_area == 0:
                     self.radius_of_curvature.append(float('inf'))
                     self.curvature.append(0.0)
                     self.centrifugal_acceleration.append(0.0)
                 else:
                     radius_of_curvature = (side_a * side_b * side_c) / (4 * triangle_area)
                     curvature = 1 / radius_of_curvature
-                    if radius_of_curvature > self.min_radius_of_curvature and radius_of_curvature < self.max_radius_of_curvature:
+                    if (radius_of_curvature >= self.min_radius_of_curvature) and (radius_of_curvature <= self.radius_of_curvature_limit):
                         self.radius_of_curvature.append(radius_of_curvature)
                         self.curvature.append(curvature)
                         self.centrifugal_acceleration.append((self.speed[i]**2)*curvature)
                     else:
                         if radius_of_curvature < self.min_radius_of_curvature:
                             self.radius_of_curvature.append(self.min_radius_of_curvature)
-                            self.curvature.append(1/self.min_radius_of_curvature)
+                            self.curvature.append(1 / self.min_radius_of_curvature)
                             self.centrifugal_acceleration.append((self.speed[i] ** 2) * self.curvature[i])
-                        elif radius_of_curvature > self.max_radius_of_curvature:
-                            self.radius_of_curvature.append(self.max_radius_of_curvature)
-                            self.curvature.append(1 / self.max_radius_of_curvature)
+                        elif radius_of_curvature > self.radius_of_curvature_limit:
+                            self.radius_of_curvature.append(self.radius_of_curvature_limit)
+                            self.curvature.append(1 / self.radius_of_curvature_limit)
                             self.centrifugal_acceleration.append((self.speed[i] ** 2) * self.curvature[i])
             else:
                 self.radius_of_curvature.append(0.0)
