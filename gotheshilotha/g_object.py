@@ -114,6 +114,8 @@ class GTS_object:
         self.coord.clear()
         self.coord = list(zip(xnew_coord, ynew_coord))
 
+
+
     def clean_dynamics_results(self, _factor=2):
 
         xnew_displacement = S_moving_average_filter(self.displacement, _smoothing=_factor)
