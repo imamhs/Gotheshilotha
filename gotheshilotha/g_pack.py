@@ -115,8 +115,8 @@ class GTS_pack:
         max_displacement = 0
 
         for ii in range(nob):
-            if self.racing_objects[ii+1].max_displacement > max_displacement:
-                max_displacement = self.racing_objects[ii+1].max_displacement
+            if self.racing_objects[ii+1].displacement_limit > max_displacement:
+                max_displacement = self.racing_objects[ii+1].displacement_limit
 
         for i in range(self.sample_size):
 
