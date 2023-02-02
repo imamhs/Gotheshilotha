@@ -1,4 +1,4 @@
-# Copyright (c) 2019-2022, Md Imam Hossain (emamhd at gmail dot com)
+# Copyright (c) 2019-2023, Md Imam Hossain (emamhd at gmail dot com)
 # see LICENSE.txt for details
 
 """
@@ -13,26 +13,29 @@ from obosthan import OPoint2D, OLine2D
 from shuddo import S_get_cluster_centroid_data, S_find_sample_distance_data, S_standard_deviation_values
 from .g_object import GTS_object
 
+from .g_constants import SPEED_OF_LIGHT
+from .g_constants import UNDEFINED
+
 class GTS_pack:
 
     def __init__(self, _max_distance):
-        self.SPEED_OF_LIGHT = 299792458.0
+
         self.max_distance = _max_distance  # max separation distance between objects
-        self.num_of_objects = -1
-        self.sample_size = -1
+        self.num_of_objects = UNDEFINED
+        self.sample_size = UNDEFINED
         self.stripped_data = False  # flag for whether data points are stripped down to match stride frequency
-        self.racing_objects = [] # list of racers
+        self.racing_objects = []  # list of racers
         self.centroid_coord = []
         self.track_coord = []
         self.__track_coord = []
         self.__track_coord_tree = None
-        self.centroid_distance = [] # distance travelled by the objects' centroid
+        self.centroid_distance = []  # distance travelled by the objects' centroid
         self.lure_separation_distance = []  # distance to lure from the leading object
         self.average_lure_distance = []  # average of objects' distances to the lure
-        self.average_centroid_distance = [] # average of objects' distances to the objects' centroid
+        self.average_centroid_distance = []  # average of objects' distances to the objects' centroid
         self.average_objects_distance = []  # average distance of objects' distances
         self.average_objects_maximum_distance = []  # average distance of objects' maximum distances
-        self.average_objects_speed = [] # average speed of objects' speeds
+        self.average_objects_speed = []  # average speed of objects' speeds
         self.average_objects_average_speed = []
         self.average_objects_heading = []
         self.average_objects_yaw_rate = []  # average yaw rate of objects' yaw rates
@@ -40,7 +43,7 @@ class GTS_pack:
         self.average_objects_centrifugal_acceleration = []
         self.average_objects_offset_to_track = []  # average offset of objects' from the track path
         self.minmax_objects_speed = []  # minimum and maximum speed of objects
-        self.minmax_objects_yaw_rate = [] # minimum and maximum yaw of objects
+        self.minmax_objects_yaw_rate = []  # minimum and maximum yaw of objects
         self.minmax_objects_curvature = []  # minimum and maximum curvature of objects
         self.minmax_centroid_distance = []  # minimum and maximum distances to the objects' centroid
         self.minmax_objects_offset_to_track = []  # minimum and maximum offsets of objects' from the track path
@@ -48,6 +51,34 @@ class GTS_pack:
         self.std_objects_yaw_rate = []  # std yaw of objects
         self.std_objects_curvature = []  # std curvature of objects
         self.std_objects_heading = []
+
+    def reset_data(self):  # clears dynamics calculation data
+
+        self.centroid_coord.clear()
+        self.__track_coord.clear()
+        self.__track_coord_tree = None
+        self.centroid_distance.clear()
+        self.lure_separation_distance.clear()
+        self.average_lure_distance.clear()
+        self.average_centroid_distance.clear()
+        self.average_objects_distance.clear()
+        self.average_objects_maximum_distance.clear()
+        self.average_objects_speed.clear()
+        self.average_objects_average_speed.clear()
+        self.average_objects_heading.clear()
+        self.average_objects_yaw_rate.clear()
+        self.average_objects_curvature.clear()
+        self.average_objects_centrifugal_acceleration.clear()
+        self.average_objects_offset_to_track.clear()
+        self.minmax_objects_speed.clear()
+        self.minmax_objects_yaw_rate.clear()
+        self.minmax_objects_curvature.clear()
+        self.minmax_centroid_distance.clear()
+        self.minmax_objects_offset_to_track.clear()
+        self.std_objects_speed.clear()
+        self.std_objects_yaw_rate.clear()
+        self.std_objects_curvature.clear()
+        self.std_objects_heading.clear()
 
     def is_number(self, s):
         try:
@@ -108,7 +139,7 @@ class GTS_pack:
 
     def calculate_dynamics(self):
 
-        nob = self.num_of_objects - 1
+        nob = self.num_of_objects - 1  # calculate only for objects other than the first object
 
         centroid_distance = 0
 
@@ -131,13 +162,13 @@ class GTS_pack:
             total_speed_average = 0
 
             min_speed = self.racing_objects[1].speed_limit
-            speed_limit = -self.SPEED_OF_LIGHT
+            speed_limit = -SPEED_OF_LIGHT
 
             min_curvature = 1000
             max_curvature = 0
 
             min_yaw_rate = self.racing_objects[1].yaw_rate_limit
-            yaw_rate_limit = -self.SPEED_OF_LIGHT
+            yaw_rate_limit = -SPEED_OF_LIGHT
 
             for ii in range(nob):
                 racing_objects_coords.append((self.racing_objects[ii+1].coord[i][0], self.racing_objects[ii+1].coord[i][1]))
@@ -215,7 +246,7 @@ class GTS_pack:
             self.average_objects_average_speed.append(total_speed_average / nob)
 
             self.average_objects_yaw_rate.append(sum(racing_objects_yaw_rates) / nob)
-            self.average_objects_curvature.append(sum(racing_objects_curvatures) /nob)
+            self.average_objects_curvature.append(sum(racing_objects_curvatures) / nob)
             self.average_objects_centrifugal_acceleration.append(sum(racing_objects_centrifugal_accelerations) / nob)
             self.average_objects_heading.append(sum(racing_objects_headings) / nob)
 
@@ -356,39 +387,15 @@ class GTS_pack:
 
        csv_out.close()
 
-    def load_race_data(self, filename, _stride_duration=0.282, _speed_limit=25, _max_acceleration=20, _yaw_rate_limit=1, _min_time_period=2.0, _skip_samples_head=0, _skip_samples_tail=0):
+    def load_race_data(self, _filename, _stride_duration, _speed_limit, _acceleration_limit, _yaw_rate_limit, _min_time_period, _skip_head_samples=0, _skip_tail_samples=0):
 
         print("Trying loading race data ...")
 
-        csv_in = open(filename, 'r')
+        csv_in = open(_filename, 'r')
         csv_reader = reader(csv_in)
         buffer_list = list(csv_reader)
         total_rows = len(buffer_list)
         row_counter = 1
-
-        self.racing_objects.clear()
-        self.centroid_coord.clear()
-        self.centroid_distance.clear()
-        self.lure_separation_distance.clear()
-        self.average_lure_distance.clear()
-        self.average_centroid_distance.clear()
-        self.average_objects_distance.clear()
-        self.average_objects_maximum_distance.clear()
-        self.average_objects_speed.clear()
-        self.average_objects_average_speed.clear()
-        self.average_objects_heading.clear()
-        self.average_objects_yaw_rate.clear()
-        self.average_objects_curvature.clear()
-        self.average_objects_centrifugal_acceleration.clear()
-        self.minmax_objects_speed.clear()
-        self.minmax_objects_yaw_rate.clear()
-        self.minmax_objects_curvature.clear()
-        self.minmax_centroid_distance.clear()
-        self.minmax_objects_offset_to_track.clear()
-        self.std_objects_speed.clear()
-        self.std_objects_yaw_rate.clear()
-        self.std_objects_curvature.clear()
-        self.std_objects_heading.clear()
 
         try:
 
@@ -396,7 +403,7 @@ class GTS_pack:
                 if len(self.racing_objects) == 0:
 
                     for i in range(int((len(row)-1)/2)):
-                        self.racing_objects.append(GTS_object(_stride_duration, _speed_limit, _max_acceleration, _yaw_rate_limit))
+                        self.racing_objects.append(GTS_object(_stride_duration, _speed_limit, _acceleration_limit, _yaw_rate_limit))
                         if i > 0:
                             self.racing_objects[i].start_position_identifier = int(row[i+i+1][1:2])
 
@@ -404,7 +411,7 @@ class GTS_pack:
 
                 else:
 
-                    if (row_counter >= (_skip_samples_head+2)) and (row_counter <= (total_rows - _skip_samples_tail)):
+                    if (row_counter >= (_skip_head_samples+2)) and (row_counter <= (total_rows - _skip_tail_samples)):
 
                         for i in range(len(self.racing_objects)):
                             self.racing_objects[i].time.append(float(row[0]))
@@ -427,12 +434,6 @@ class GTS_pack:
         self.sample_size = len(self.racing_objects[0].time)
 
         for i in range(self.num_of_objects):
-            self.racing_objects[i].sampling_size = len(self.racing_objects[i].time)
-            self.racing_objects[i].time_interval = max(self.racing_objects[i].time) / self.racing_objects[i].sampling_size
-            self.racing_objects[i].displacement_limit = self.racing_objects[i].time_interval * self.racing_objects[i].speed_limit
-            self.racing_objects[i].angular_displacement_limit = self.racing_objects[i].time_interval * degrees(self.racing_objects[i].yaw_rate_limit)
-            self.racing_objects[i].min_radius_of_curvature = self.racing_objects[i].speed_limit / self.racing_objects[i].yaw_rate_limit
-            self.racing_objects[i].sampling_rate = int(1 / self.racing_objects[i].time_interval)
-            self.racing_objects[i].stride_cycle_steps = ceil(self.racing_objects[i].stride_duration / self.racing_objects[i].time_interval)
+            self.racing_objects[i].calculate_data_sampling()
 
         return True
