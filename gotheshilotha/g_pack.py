@@ -6,7 +6,6 @@ Racing subjects pack object
 """
 
 from csv import reader, writer
-from math import hypot, ceil, degrees
 from numpy import empty
 from scipy.spatial import KDTree
 from obosthan import OPoint2D, OLine2D
@@ -27,11 +26,10 @@ class GTS_pack:
         self.racing_objects = []  # list of racers
         self.centroid_coord = []
         self.track_coord = []
-        self.__track_coord = []
         self.__track_coord_tree = None
         self.centroid_distance = []  # distance travelled by the objects' centroid
-        self.lure_separation_distance = []  # distance to lure from the leading object
-        self.average_lure_distance = []  # average of objects' distances to the lure
+        self.target_separation_distance = []  # distance to target from the leading object
+        self.average_target_distance = []  # average of objects' distances to the target
         self.average_centroid_distance = []  # average of objects' distances to the objects' centroid
         self.average_objects_distance = []  # average distance of objects' distances
         self.average_objects_maximum_distance = []  # average distance of objects' maximum distances
@@ -50,16 +48,16 @@ class GTS_pack:
         self.std_objects_speed = []  # std speed of objects
         self.std_objects_yaw_rate = []  # std yaw of objects
         self.std_objects_curvature = []  # std curvature of objects
-        self.std_objects_heading = []
+        self.std_objects_heading = [] # std heading of objects
 
     def reset_data(self):  # clears dynamics calculation data
 
         self.centroid_coord.clear()
-        self.__track_coord.clear()
+        self.track_coord.clear()
         self.__track_coord_tree = None
         self.centroid_distance.clear()
-        self.lure_separation_distance.clear()
-        self.average_lure_distance.clear()
+        self.target_separation_distance.clear()
+        self.average_target_distance.clear()
         self.average_centroid_distance.clear()
         self.average_objects_distance.clear()
         self.average_objects_maximum_distance.clear()
@@ -110,7 +108,7 @@ class GTS_pack:
         for i in range(self.num_of_objects):
             self.racing_objects[i].adjust_data_sampling()
 
-        self.sample_size = len(self.racing_objects[0].time)
+        self.sample_size = len(self.racing_objects[1].time)
         self.stripped_data = True
 
     def uniform_results_sampling(self):
@@ -139,7 +137,7 @@ class GTS_pack:
 
     def calculate_dynamics(self):
 
-        nob = self.num_of_objects - 1  # calculate only for objects other than the first object
+        nob = self.num_of_objects - 1  # calculate only for objects other than the target object
 
         centroid_distance = 0
 
@@ -183,10 +181,10 @@ class GTS_pack:
             self.std_objects_curvature.append(S_standard_deviation_values(racing_objects_curvatures))
             self.std_objects_heading.append(S_standard_deviation_values(racing_objects_headings))
 
-            average_lure_separation_distance, min_lure_separation_distance, max_lure_separation_distance, lure_separation_distances = S_find_sample_distance_data(racing_objects_coords, (self.racing_objects[0].coord[i][0], self.racing_objects[0].coord[i][1]))
+            average_target_separation_distance, min_target_separation_distance, max_target_separation_distance, target_separation_distances = S_find_sample_distance_data(racing_objects_coords, (self.racing_objects[0].coord[i][0], self.racing_objects[0].coord[i][1]))
 
-            self.average_lure_distance.append(average_lure_separation_distance)
-            self.lure_separation_distance.append(min_lure_separation_distance)
+            self.average_target_distance.append(average_target_separation_distance)
+            self.target_separation_distance.append(min_target_separation_distance)
 
             centroid_position_x, centroid_position_y = S_get_cluster_centroid_data(racing_objects_coords)
 
@@ -204,7 +202,7 @@ class GTS_pack:
             if i == 0:
                 self.centroid_distance.append(0.0)
             else:
-                distance = hypot(self.centroid_coord[i][0]-self.centroid_coord[i-1][0], self.centroid_coord[i][1]-self.centroid_coord[i-1][1])
+                distance = (((self.centroid_coord[i][0]-self.centroid_coord[i-1][0])**2)+((self.centroid_coord[i][1]-self.centroid_coord[i-1][1])**2))**0.5
                 if distance >= max_displacement:
                     centroid_distance += max_displacement
                     self.centroid_distance.append(centroid_distance)
@@ -214,10 +212,22 @@ class GTS_pack:
 
             for ii in range(nob):
 
-                if lure_separation_distances[ii] < self.max_distance:
-                    self.racing_objects[ii+1].distance_to_lure.append(lure_separation_distances[ii])
+                other_racing_objects_coords = []
+
+                for iii in range(nob):
+                    if iii == ii:
+                        continue
+                    other_racing_objects_coords.append((self.racing_objects[iii+1].coord[i][0], self.racing_objects[iii+1].coord[i][1]))
+
+                average_object_separation_distance, min_object_separation_distance, max_object_separation_distance, object_separation_distances = S_find_sample_distance_data(other_racing_objects_coords, (self.racing_objects[ii+1].coord[i][0], self.racing_objects[ii+1].coord[i][1]))
+
+                self.racing_objects[ii+1].average_distance_to_others.append(average_object_separation_distance)
+                self.racing_objects[ii+1].min_distance_to_others.append(min_object_separation_distance)
+
+                if target_separation_distances[ii] < self.max_distance:
+                    self.racing_objects[ii+1].distance_to_target.append(target_separation_distances[ii])
                 else:
-                    self.racing_objects[ii+1].distance_to_lure.append(0.0)
+                    self.racing_objects[ii+1].distance_to_target.append(0.0)
 
                 distances.append(self.racing_objects[ii+1].distance[i])
                 total_speed_average += self.racing_objects[ii+1].average_speed[i]
@@ -254,13 +264,25 @@ class GTS_pack:
             self.minmax_objects_curvature.append((min_curvature, max_curvature))
             self.minmax_objects_yaw_rate.append((min_yaw_rate, yaw_rate_limit))
 
-        if self.stripped_data and (self.__track_coord_tree != None):
+        if self.stripped_data is True and self.__track_coord_tree is not None:
 
             for i in range(self.sample_size):
+
                 for ii in range(nob):
 
-                    projected_track_segment_end_distance, projected_track_segment_point_index = self.__track_coord_tree.query(self.racing_objects[ii+1].coord[i], 2)
-                    self.racing_objects[ii+1].offset_to_track.append(OLine2D(float(self.__track_coord[projected_track_segment_point_index[0], 0]), float(self.__track_coord[projected_track_segment_point_index[0], 1]), float(self.__track_coord[projected_track_segment_point_index[1], 0]), float(self.__track_coord[projected_track_segment_point_index[1], 1])).distance_to_point(self.racing_objects[ii+1].coord[i]))
+                    projected_track_segment_end_distance, projected_track_segment_point_index = self.__track_coord_tree.query(self.racing_objects[ii+1].coord[i], k=2)
+                    offset_to_track_c = OLine2D(self.track_coord[projected_track_segment_point_index[0]][0], self.track_coord[projected_track_segment_point_index[0]][1], self.track_coord[projected_track_segment_point_index[1]][0], self.track_coord[projected_track_segment_point_index[1]][1]).distance_to_point(self.racing_objects[ii+1].coord[i])
+                    dis_to_track_p1 = (((self.track_coord[projected_track_segment_point_index[0]][0] - self.racing_objects[ii+1].coord[i][0])**2) + ((self.track_coord[projected_track_segment_point_index[0]][1] - self.racing_objects[ii+1].coord[i][1])**2))**0.5
+                    if dis_to_track_p1 / offset_to_track_c > 2.0: # only add if the distance is actual distance not perpendicular distance even though far away
+                        if i == 0 or i == 1:
+                            self.racing_objects[ii + 1].offset_to_track.append(0.0)
+                            self.average_objects_offset_to_track.append(0.0)
+                            self.minmax_objects_offset_to_track.append((0.0, 0.0))
+                            continue
+                        offset_to_track_slope = (self.racing_objects[ii+1].offset_to_track[-1] - self.racing_objects[ii+1].offset_to_track[-2]) / self.racing_objects[ii+1].time_interval[i]
+                        offset_to_track_c = (offset_to_track_slope * self.racing_objects[ii+1].time_interval[i]) + self.racing_objects[ii+1].offset_to_track[-1]
+
+                    self.racing_objects[ii + 1].offset_to_track.append(offset_to_track_c)
 
                 racing_objects_offset_to_track = []
 
@@ -271,6 +293,7 @@ class GTS_pack:
                 self.minmax_objects_offset_to_track.append((min(racing_objects_offset_to_track), max(racing_objects_offset_to_track)))
 
     def load_track_coord(self, filename):
+
         print("Trying loading track coord data ...")
 
         csv_in = open(filename, 'r')
@@ -283,28 +306,27 @@ class GTS_pack:
             return False
 
         try:
-
             for row in buffer_list:
 
                 self.track_coord.append((float(row[0]), float(row[1])))
                 row_counter = row_counter + 1
-
         except:
             csv_in.close()
+            self.track_coord.clear()
+
             return False
+        else:
 
-        csv_in.close()
+            csv_in.close()
 
-        self.__track_coord = empty((total_rows, 2))
+            if len(self.track_coord) > 3:
+                self.__track_coord_tree = KDTree(self.track_coord)
 
-        for i in range(total_rows):
-            self.__track_coord[i, 0] = self.track_coord[i][0]
-            self.__track_coord[i, 1] = self.track_coord[i][1]
-
-        if len(self.__track_coord) > 0:
-            self.__track_coord_tree = KDTree(self.__track_coord)
-
-        return True
+            if self.__track_coord_tree is not None:
+                return True
+            else:
+                self.track_coord.clear()
+                return False
 
     def dump_race_data(self, filename):
 
@@ -420,20 +442,25 @@ class GTS_pack:
                 row_counter = row_counter + 1
 
         except:
+
             csv_in.close()
-            return False
-
-        csv_in.close()
-
-        if self.racing_objects[0].time[-1] < _min_time_period:
             self.racing_objects.clear()
-            self.num_of_objects = 0
+
             return False
 
-        self.num_of_objects = len(self.racing_objects)
-        self.sample_size = len(self.racing_objects[0].time)
+        else:
 
-        for i in range(self.num_of_objects):
-            self.racing_objects[i].calculate_data_sampling()
+            csv_in.close()
 
-        return True
+            if self.racing_objects[1].time[-1] < _min_time_period:
+                self.racing_objects.clear()
+                self.num_of_objects = 0
+                return False
+
+            self.num_of_objects = len(self.racing_objects)
+            self.sample_size = len(self.racing_objects[1].time)
+
+            for i in range(self.num_of_objects):
+                self.racing_objects[i].calculate_data_sampling()
+
+            return True

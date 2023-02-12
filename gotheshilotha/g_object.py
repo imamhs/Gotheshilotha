@@ -6,6 +6,7 @@ Racing subject object
 """
 
 from math import hypot, radians, sqrt, ceil, degrees
+from numpy import polyfit, polyval
 from obosthan import OVector2D
 from shuddo import S_moving_average_filter, S_uniform_spread_data
 
@@ -45,8 +46,9 @@ class GTS_object:
         self.curvature = []  # path curvature
         self.radius_of_curvature = []   # path radius of curvature
         self.centrifugal_acceleration = []
-        self.distance_to_lure = []
+        self.distance_to_target = []
         self.average_distance_to_others = []
+        self.min_distance_to_others = []
         self.offset_to_track = []
         self.start_position_identifier = 0
 
@@ -72,8 +74,9 @@ class GTS_object:
         self.curvature.clear()
         self.radius_of_curvature.clear()
         self.centrifugal_acceleration.clear()
-        self.distance_to_lure.clear()
+        self.distance_to_target.clear()
         self.average_distance_to_others.clear()
+        self.min_distance_to_others.clear()
         self.offset_to_track.clear()
 
     def calculate_data_sampling(self):
@@ -331,5 +334,15 @@ class GTS_object:
         self.curvature[-1] = (1 / self.radius_of_curvature[-1])
         self.centrifugal_acceleration[-1] = ((self.speed[-1] ** 2) * self.curvature[-1])
 
-        if self.stripped_data == True:
-            pass
+        if self.stripped_data is True:
+
+            p9 = polyfit(self.time, self.speed, 9)
+
+            self.speed_model = polyval(p9, self.time)
+            self.speed_model[0] = 0
+
+            p9 = polyfit(self.time, self.acceleration, 9)
+
+            self.acceleration_model = polyval(p9, self.time)
+            self.acceleration_model[0] = 0
+
