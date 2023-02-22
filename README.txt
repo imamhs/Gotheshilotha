@@ -3,7 +3,7 @@ Gotheshilotha (A generic library for studying racing/moving subjects)
 
 --------------------------------------------------------------------------------------
 
-A library for Python to analyse racing/moving subjects' motion from their 2D point coordinates.
+A library for Python to analyse moving subjects' motion from their 2D point coordinates.
 
 To use, just include gotheshilotha directory into your project.
 
