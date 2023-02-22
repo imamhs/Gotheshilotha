@@ -5,7 +5,7 @@
 Racing subject object
 """
 
-from math import hypot, radians, sqrt, ceil, degrees
+from math import radians, sqrt, ceil, degrees
 from numpy import polyfit, polyval
 from obosthan import OVector2D
 from shuddo import S_moving_average_filter, S_uniform_spread_data
@@ -35,10 +35,15 @@ class GTS_object:
         self.time = []  # time
         self.coord = []  # X and Y coordinates tuple
         self.displacement = []
+        self.elevation = []
+        self.camber_rate = []
         self.heading = []
+        self.heading_deflection = []
         self.distance = []
         self.yaw = []
         self.speed = []
+        self.speed_change = []
+        self.relative_speed = []
         self.average_speed = []
         self.acceleration = []
         self.yaw_rate = []
@@ -63,10 +68,15 @@ class GTS_object:
         self.sampling_rate = UNDEFINED  # number of data points per second
         self.stride_cycle_steps = UNDEFINED  # number of data points per stride
         self.displacement.clear()
+        self.elevation.clear()
+        self.camber_rate.clear()
         self.heading.clear()
+        self.heading_deflection.clear()
         self.distance.clear()
         self.yaw.clear()
         self.speed.clear()
+        self.speed_change.clear()
+        self.relative_speed.clear()
         self.average_speed.clear()
         self.acceleration.clear()
         self.yaw_rate.clear()
@@ -200,7 +210,7 @@ class GTS_object:
                 self.average_speed.append(0.0)
 
             else:
-                displacement = hypot(self.coord[i][0]-self.coord[i-1][0], self.coord[i][1]-self.coord[i-1][1])
+                displacement = (((self.coord[i][0]-self.coord[i-1][0])**2) + ((self.coord[i][1]-self.coord[i-1][1])**2))**0.5
 
                 if displacement >= self.displacement_limit:
                     if len(self.displacement) > 2:
@@ -229,6 +239,7 @@ class GTS_object:
             if (i == 0) or (i == 1):
 
                 self.acceleration.append(0.0)
+                self.speed_change.append(1.0)
                 self.angular_displacement.append(0.0)
                 self.yaw_rate.append(0.0)
                 self.yaw.append(0.0)
@@ -244,7 +255,21 @@ class GTS_object:
                 current_heading.define_line(self.coord[i-1][0], self.coord[i-1][1], self.coord[i][0], self.coord[i][1])
                 self.heading.append(current_heading.angle)
 
-                acceleration = (self.speed[-1] - self.speed[-2])/self.time_interval[i]
+                speed_f = self.speed[-1]
+                speed_i = self.speed[-2]
+
+                if speed_i == 0:
+                    if speed_f == 0:
+                        self.speed_change.append(1.0)
+                    else:
+                        self.speed_change.append(speed_i)
+                else:
+                    if speed_f == 0:
+                        self.speed_change.append(1.0/speed_i)
+                    else:
+                        self.speed_change.append(speed_f/speed_i)
+
+                acceleration = (speed_f - speed_i)/self.time_interval[i]
 
                 if abs(acceleration) > self.acceleration_limit:
                     acceleration_slope = (self.acceleration[-1]-self.acceleration[-2])/self.time_interval[i]

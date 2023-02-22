@@ -6,9 +6,8 @@ Racing subjects pack object
 """
 
 from csv import reader, writer
-from numpy import empty
 from scipy.spatial import KDTree
-from obosthan import OPoint2D, OLine2D
+from obosthan import OPoint2D, OLine2D, OVector2D
 from shuddo import S_get_cluster_centroid_data, S_find_sample_distance_data, S_standard_deviation_values
 from .g_object import GTS_object
 
@@ -26,6 +25,8 @@ class GTS_pack:
         self.racing_objects = []  # list of racers
         self.centroid_coord = []
         self.track_coord = []
+        self.track_camber = []
+        self.track_elevation = []
         self.__track_coord_tree = None
         self.centroid_distance = []  # distance travelled by the objects' centroid
         self.target_separation_distance = []  # distance to target from the leading object
@@ -40,11 +41,13 @@ class GTS_pack:
         self.average_objects_curvature = []  # average curvature of objects' paths
         self.average_objects_centrifugal_acceleration = []
         self.average_objects_offset_to_track = []  # average offset of objects' from the track path
+        self.average_objects_elevation = []  # average elevation of objects' on the track path
         self.minmax_objects_speed = []  # minimum and maximum speed of objects
         self.minmax_objects_yaw_rate = []  # minimum and maximum yaw of objects
         self.minmax_objects_curvature = []  # minimum and maximum curvature of objects
         self.minmax_centroid_distance = []  # minimum and maximum distances to the objects' centroid
         self.minmax_objects_offset_to_track = []  # minimum and maximum offsets of objects' from the track path
+        self.minmax_objects_elevation = []  # minimum and maximum elevations of objects' on the track path
         self.std_objects_speed = []  # std speed of objects
         self.std_objects_yaw_rate = []  # std yaw of objects
         self.std_objects_curvature = []  # std curvature of objects
@@ -54,6 +57,8 @@ class GTS_pack:
 
         self.centroid_coord.clear()
         self.track_coord.clear()
+        self.track_camber.clear()
+        self.track_elevation.clear()
         self.__track_coord_tree = None
         self.centroid_distance.clear()
         self.target_separation_distance.clear()
@@ -68,11 +73,13 @@ class GTS_pack:
         self.average_objects_curvature.clear()
         self.average_objects_centrifugal_acceleration.clear()
         self.average_objects_offset_to_track.clear()
+        self.average_objects_elevation.clear()
         self.minmax_objects_speed.clear()
         self.minmax_objects_yaw_rate.clear()
         self.minmax_objects_curvature.clear()
         self.minmax_centroid_distance.clear()
         self.minmax_objects_offset_to_track.clear()
+        self.minmax_objects_elevation.clear()
         self.std_objects_speed.clear()
         self.std_objects_yaw_rate.clear()
         self.std_objects_curvature.clear()
@@ -264,35 +271,80 @@ class GTS_pack:
             self.minmax_objects_curvature.append((min_curvature, max_curvature))
             self.minmax_objects_yaw_rate.append((min_yaw_rate, yaw_rate_limit))
 
+            for ii in range(nob):
+
+                self.racing_objects[ii + 1].relative_speed.append(self.racing_objects[ii + 1].speed[i]-self.average_objects_speed[i])
+
         if self.stripped_data is True and self.__track_coord_tree is not None:
 
             for i in range(self.sample_size):
 
+                racing_objects_offset_to_track = []
+                racing_objects_elevation = []
+
                 for ii in range(nob):
 
                     projected_track_segment_end_distance, projected_track_segment_point_index = self.__track_coord_tree.query(self.racing_objects[ii+1].coord[i], k=2)
-                    offset_to_track_c = OLine2D(self.track_coord[projected_track_segment_point_index[0]][0], self.track_coord[projected_track_segment_point_index[0]][1], self.track_coord[projected_track_segment_point_index[1]][0], self.track_coord[projected_track_segment_point_index[1]][1]).distance_to_point(self.racing_objects[ii+1].coord[i])
-                    dis_to_track_p1 = (((self.track_coord[projected_track_segment_point_index[0]][0] - self.racing_objects[ii+1].coord[i][0])**2) + ((self.track_coord[projected_track_segment_point_index[0]][1] - self.racing_objects[ii+1].coord[i][1])**2))**0.5
-                    if dis_to_track_p1 / offset_to_track_c > 2.0: # only add if the distance is actual distance not perpendicular distance even though far away
+                    track_line_segment = OLine2D(self.track_coord[projected_track_segment_point_index[0]][0], self.track_coord[projected_track_segment_point_index[0]][1], self.track_coord[projected_track_segment_point_index[1]][0], self.track_coord[projected_track_segment_point_index[1]][1])
+                    offset_to_track_c = track_line_segment.distance_to_point(self.racing_objects[ii + 1].coord[i])
+                    dis_to_track_segment_p1 = (((self.track_coord[projected_track_segment_point_index[0]][0] - self.racing_objects[ii+1].coord[i][0])**2) + ((self.track_coord[projected_track_segment_point_index[0]][1] - self.racing_objects[ii+1].coord[i][1])**2))**0.5
+                    if dis_to_track_segment_p1 / offset_to_track_c > 2.0: # only add if the distance is actual distance not perpendicular distance even though far away
                         if i == 0 or i == 1:
+                            self.racing_objects[ii + 1].heading_deflection.append(0.0)
                             self.racing_objects[ii + 1].offset_to_track.append(0.0)
+                            self.racing_objects[ii + 1].elevation.append(0.0)
                             self.average_objects_offset_to_track.append(0.0)
                             self.minmax_objects_offset_to_track.append((0.0, 0.0))
+                            self.average_objects_elevation.append(0.0)
+                            self.minmax_objects_elevation.append((0.0, 0.0))
                             continue
                         offset_to_track_slope = (self.racing_objects[ii+1].offset_to_track[-1] - self.racing_objects[ii+1].offset_to_track[-2]) / self.racing_objects[ii+1].time_interval[i]
                         offset_to_track_c = (offset_to_track_slope * self.racing_objects[ii+1].time_interval[i]) + self.racing_objects[ii+1].offset_to_track[-1]
 
                     self.racing_objects[ii + 1].offset_to_track.append(offset_to_track_c)
 
-                racing_objects_offset_to_track = []
+                    if i == 0 or i == 1:
+                        self.racing_objects[ii + 1].heading_deflection.append(0.0)
+                    else:
 
-                for ii in range(nob):
-                    racing_objects_offset_to_track.append(self.racing_objects[ii + 1].offset_to_track[i])
+                        track_segment_vector = OVector2D(0, 0)
+                        track_segment_vector.define_line1(self.track_coord[projected_track_segment_point_index[0]][0], self.track_coord[projected_track_segment_point_index[0]][1], self.track_coord[projected_track_segment_point_index[1]][0], self.track_coord[projected_track_segment_point_index[1]][1])
+
+                        object_vector = OVector2D(0, 0)
+                        object_vector.define_line1(self.racing_objects[ii + 1].coord[i-1][0], self.racing_objects[ii + 1].coord[i-1][1], self.racing_objects[ii + 1].coord[i][0], self.racing_objects[ii + 1].coord[i][1])
+
+                        self.racing_objects[ii + 1].heading_deflection.append(object_vector.angle_to(track_segment_vector))
+
+                    track_elevation_slope = (self.track_elevation[projected_track_segment_point_index[1]]-self.track_elevation[projected_track_segment_point_index[0]])/track_line_segment.length
+                    track_elevation = (track_elevation_slope*projected_track_segment_end_distance[0])+self.track_elevation[projected_track_segment_point_index[0]]
+
+                    track_camber_slope = (self.track_camber[projected_track_segment_point_index[1]]-self.track_camber[projected_track_segment_point_index[0]])/track_line_segment.length
+                    track_camber = (track_camber_slope*projected_track_segment_end_distance[0])+self.track_camber[projected_track_segment_point_index[0]]
+
+                    object_elevation = track_elevation + ((track_camber / 100) * offset_to_track_c)
+
+                    self.racing_objects[ii + 1].elevation.append(object_elevation)
+
+                    racing_objects_offset_to_track.append(offset_to_track_c)
+                    racing_objects_elevation.append(object_elevation)
+
+                    if i == 0:
+                        self.racing_objects[ii + 1].camber_rate.append(0.0)
+                    else:
+                        object_camber_rate = 0
+
+                        if self.racing_objects[ii + 1].displacement[i] > 0:
+                            object_camber_rate = ((object_elevation-self.racing_objects[ii + 1].elevation[-2])/self.racing_objects[ii + 1].displacement[i])*100
+
+                        self.racing_objects[ii + 1].camber_rate.append(object_camber_rate)
 
                 self.average_objects_offset_to_track.append(sum(racing_objects_offset_to_track) / nob)
                 self.minmax_objects_offset_to_track.append((min(racing_objects_offset_to_track), max(racing_objects_offset_to_track)))
 
-    def load_track_coord(self, filename):
+                self.average_objects_elevation.append(sum(racing_objects_elevation) / nob)
+                self.minmax_objects_elevation.append((min(racing_objects_elevation), max(racing_objects_elevation)))
+
+    def load_track_data(self, filename):
 
         print("Trying loading track coord data ...")
 
@@ -309,10 +361,14 @@ class GTS_pack:
             for row in buffer_list:
 
                 self.track_coord.append((float(row[0]), float(row[1])))
+                self.track_elevation.append(float(row[2]))
+                self.track_camber.append(float(row[3]))
                 row_counter = row_counter + 1
         except:
             csv_in.close()
             self.track_coord.clear()
+            self.track_camber.clear()
+            self.track_elevation.clear()
 
             return False
         else:
@@ -326,6 +382,8 @@ class GTS_pack:
                 return True
             else:
                 self.track_coord.clear()
+                self.track_camber.clear()
+                self.track_elevation.clear()
                 return False
 
     def dump_race_data(self, filename):
